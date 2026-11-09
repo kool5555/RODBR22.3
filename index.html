@@ -129,6 +129,14 @@
         .cs-file { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); text-decoration: none; color: #fff; transition: all 0.15s; }
         .cs-file:hover { border-color: #198754; background: rgba(25,135,84,0.15); color: #fff; }
         .cs-file-btn { font-size: 0.75rem; background: #198754; color: #fff; border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+        .cs-file-link { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; color: #fff; text-decoration: none; }
+        .cs-file-link:hover { color: #86efac; }
+        .cs-file-meta { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; }
+        .cs-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 22px 12px; margin: 0; border: 2px dashed #475569; border-radius: 16px; background: rgba(15,23,42,0.6); color: #fff; cursor: pointer; text-align: center; transition: all 0.15s; }
+        .cs-drop:hover, .cs-drop.drag { border-color: #22c55e; background: rgba(34,197,94,0.08); }
+        .cs-up-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 6px; border-radius: 12px; background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); color: #fff; font-size: 0.88rem; }
+        .cs-up-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cs-st { font-size: 0.75rem; white-space: nowrap; }
     </style>
 </head>
 <body class="p-3 p-md-4">
@@ -338,13 +346,14 @@
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
                     <div>
                         <h5 class="text-white m-0"><i class="fa-solid fa-microscope text-success me-2"></i>ผลเพาะเชื้อระบบน้ำ <span id="csCount" class="history-chip ms-2 align-middle d-none"></span></h5>
-                        <small class="text-muted">คลิกเลือกเดือนเพื่อดูรายงาน PDF</small>
+                        <small class="text-muted">คลิกเลือกเดือนเพื่อดู แก้ไข หรือลบไฟล์</small>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap flex-md-nowrap align-items-center">
                         <select id="csMonthFilter" class="form-select form-select-sm bg-dark text-white border-secondary rounded-pill px-3" style="flex: 1 1 150px; max-width: 180px; min-width: 0;">
                             <option value="all">ทุกปี</option>
                         </select>
                         <input type="text" id="csSearchInput" placeholder="🔍 ค้นหา เช่น มิ.ย." class="form-control form-control-sm bg-dark text-white border-secondary rounded-pill px-3" style="flex: 1 1 140px; max-width: 170px; min-width: 0;" />
+                        <button type="button" id="csAddBtn" class="btn btn-sm btn-success rounded-pill px-3 text-nowrap"><i class="fa-solid fa-plus me-1"></i> เพิ่มไฟล์</button>
                     </div>
                 </div>
 
@@ -378,10 +387,139 @@
                     </div>
                 </div>
                 <div class="modal-footer py-2">
+                    <button type="button" id="csAddHereBtn" class="btn btn-sm btn-success rounded-pill px-3 me-auto"><i class="fa-solid fa-plus me-1"></i> เพิ่มไฟล์ในเดือนนี้</button>
                     <a id="csOpenDrive" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success rounded-pill px-3">
                         <i class="fa-brands fa-google-drive me-1"></i> เปิดโฟลเดอร์ใน Google Drive
                     </a>
                     <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">ปิด</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal: เพิ่มไฟล์ผลเพาะเชื้อ ===== -->
+    <div class="modal fade ro-modal" id="csUploadModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-success"><i class="fa-solid fa-cloud-arrow-up me-2"></i>เพิ่มไฟล์ผลเพาะเชื้อ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-7 col-md-4">
+                            <label class="form-label small text-info mb-1">เดือนของผลเพาะเชื้อ</label>
+                            <select id="csUpMonth" class="form-select form-select-sm ro-input"></select>
+                        </div>
+                        <div class="col-5 col-md-3">
+                            <label class="form-label small text-info mb-1">ปี (พ.ศ.)</label>
+                            <select id="csUpYear" class="form-select form-select-sm ro-input"></select>
+                        </div>
+                        <div class="col-12 col-md-5 d-flex align-items-end">
+                            <div id="csUpHint" class="small text-white pb-1"></div>
+                        </div>
+                    </div>
+                    <label id="csDrop" class="cs-drop mt-3" for="csUpFiles">
+                        <i class="fa-solid fa-file-arrow-up fa-2x text-success"></i>
+                        <span class="fw-semibold">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</span>
+                        <span class="cs-file-meta">PDF หรือรูปภาพ ไม่เกิน 10 MB ต่อไฟล์ เลือกได้หลายไฟล์</span>
+                    </label>
+                    <input type="file" id="csUpFiles" class="d-none" multiple accept="application/pdf,image/*">
+                    <div id="csUpList" class="mt-3"></div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small text-info mb-1">ผู้อัปโหลด</label>
+                            <input type="text" id="csUpBy" class="form-control form-control-sm ro-input" placeholder="ชื่อ-สกุล ผู้อัปโหลด">
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small text-info mb-1">หมายเหตุ (ไม่บังคับ)</label>
+                            <input type="text" id="csUpNote" class="form-control form-control-sm ro-input" placeholder="เช่น ผลจากห้องปฏิบัติการ รอบประจำเดือน">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" id="csUpBtn" class="btn btn-sm btn-success rounded-pill px-4 fw-bold"><i class="fa-solid fa-cloud-arrow-up me-1"></i> อัปโหลด</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal: แก้ไขไฟล์ผลเพาะเชื้อ ===== -->
+    <div class="modal fade ro-modal" id="csEditModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-warning"><i class="fas fa-pen me-2"></i>แก้ไขไฟล์ผลเพาะเชื้อ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label small text-info mb-1">ชื่อไฟล์</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="csEdName" class="form-control ro-input">
+                        <span id="csEdExt" class="input-group-text bg-dark text-white border-secondary">.pdf</span>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-7 col-md-4">
+                            <label class="form-label small text-info mb-1">เดือนของผลเพาะเชื้อ</label>
+                            <select id="csEdMonth" class="form-select form-select-sm ro-input"></select>
+                        </div>
+                        <div class="col-5 col-md-3">
+                            <label class="form-label small text-info mb-1">ปี (พ.ศ.)</label>
+                            <select id="csEdYear" class="form-select form-select-sm ro-input"></select>
+                        </div>
+                        <div class="col-12 col-md-5 d-flex align-items-end">
+                            <div id="csEdFolderHint" class="small text-secondary pb-1"></div>
+                        </div>
+                    </div>
+                    <label class="form-label small text-info mb-1 mt-3">เปลี่ยนเป็นไฟล์ใหม่ (ไม่บังคับ)</label>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <label for="csEdFile" class="btn btn-sm btn-outline-light rounded-pill px-3 mb-0"><i class="fa-solid fa-file-arrow-up me-1"></i> เลือกไฟล์ใหม่</label>
+                        <button type="button" id="csEdFileClear" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-none">ไม่เปลี่ยนไฟล์</button>
+                    </div>
+                    <input type="file" id="csEdFile" class="d-none" accept="application/pdf,image/*">
+                    <div id="csEdFileInfo" class="small mt-1 text-secondary">ใช้เมื่ออัปโหลดไฟล์ผิด ไฟล์เดิมจะถูกย้ายไปถังขยะของ Google Drive</div>
+                    <hr class="border-secondary my-3">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small text-info mb-1">ผู้แก้ไข</label>
+                            <input type="text" id="csEdBy" class="form-control form-control-sm ro-input" placeholder="ชื่อ-สกุล ผู้แก้ไข">
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small text-info mb-1">เหตุผลการแก้ไข (ไม่บังคับ)</label>
+                            <input type="text" id="csEdReason" class="form-control form-control-sm ro-input" placeholder="เช่น อัปโหลดผิดเดือน">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" id="csEdSaveBtn" class="btn btn-sm btn-warning rounded-pill px-4 fw-bold"><i class="fas fa-save me-1"></i> บันทึกการแก้ไข</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal: ยืนยันการลบไฟล์ผลเพาะเชื้อ ===== -->
+    <div class="modal fade ro-modal" id="csDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="fas fa-trash me-2"></i>ลบไฟล์ผลเพาะเชื้อ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="csDelSummary" class="mb-3"></div>
+                    <div class="alert alert-danger bg-transparent border-danger text-danger small py-2 mb-3">
+                        <i class="fas fa-exclamation-triangle me-1"></i> ไฟล์จะถูกย้ายไปถังขยะของ Google Drive (กู้คืนได้ภายใน 30 วัน) และบันทึกไว้ในชีต <b>LOG_ผลเพาะเชื้อ</b>
+                    </div>
+                    <label class="form-label small text-info mb-1">ผู้ลบ</label>
+                    <input type="text" id="csDelBy" class="form-control form-control-sm ro-input mb-2" placeholder="ชื่อ-สกุล ผู้ลบ">
+                    <label class="form-label small text-info mb-1">เหตุผลการลบ (ไม่บังคับ)</label>
+                    <input type="text" id="csDelReason" class="form-control form-control-sm ro-input" placeholder="เช่น อัปโหลดซ้ำ">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" id="csDelConfirmBtn" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold"><i class="fas fa-trash me-1"></i> ลบไฟล์</button>
                 </div>
             </div>
         </div>
@@ -470,7 +608,8 @@
     <!-- Script รวมการทำงานทั้งหมด -->
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8aVFEjLhmdaTHqXkTTvVzCtarch9qRuJqhNYDrIV4iye2Ha2MIaMtibqf4nnABkM/exec";
-        const CS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1T2I9jBaUVQqRA-pnmqxAqZlTKZRI212-moZ_LpviGI3yILCekDVyAeaeKjP38tUw/exec";
+        const CS_SCRIPT_URL = SCRIPT_URL; // ผลเพาะเชื้อใช้ Apps Script ตัวเดียวกับแดชบอร์ด (โฟลเดอร์ ROR223)
+        const CS_MAX_FILE_MB = 10;
         
         let globalData = [];
         let currentDayData = null;
@@ -487,6 +626,13 @@
         let lastActor = '';
         let editingUid = null;
         let deletingUid = null;
+        let csCurrentFolder = null;
+        let csCurrentFiles = [];
+        let csEditingFile = null;
+        let csDeletingFile = null;
+        let csUploadItems = [];
+        let csUploading = false;
+        let csReturnToList = false;
         const csMonthNamesFull = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
         const TH_MONTH_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
@@ -1138,12 +1284,17 @@
                 }).join('') + `</optgroup>`;
             }
             if (items.some(i => !i.ym.yearBE)) html += `<option value="other">อื่นๆ (ไม่ระบุเดือน)</option>`;
+            const prev = selectEl.value;
             selectEl.innerHTML = html;
 
-            // ค่าเริ่มต้น: ปีปัจจุบัน (ถ้าปีนี้ยังไม่มีโฟลเดอร์ ใช้ปีล่าสุดที่มี)
+            // ค่าเริ่มต้น: ปีปัจจุบัน (ถ้าปีนี้ยังไม่มีโฟลเดอร์ ใช้ปีล่าสุดที่มี) หลังจากนั้นคงค่าที่ผู้ใช้เลือกไว้
             if (!csFilterReady) {
                 selectEl.value = years.includes(curBE) ? `year:${curBE}` : (years.length ? `year:${years[0]}` : 'all');
-                csFilterReady = true;
+                if (years.length) csFilterReady = true;
+            } else if ([...selectEl.options].some(o => o.value === prev)) {
+                selectEl.value = prev;
+            } else {
+                selectEl.value = years.includes(curBE) ? `year:${curBE}` : 'all';
             }
         }
 
@@ -1166,7 +1317,9 @@
             countEl.classList.remove('d-none');
 
             if (!filtered.length) {
-                container.innerHTML = `<div class="text-center text-muted py-3 small" style="grid-column: 1 / -1;">ไม่พบโฟลเดอร์ผลเพาะเชื้อ</div>`;
+                container.innerHTML = allCSFolders.length
+                    ? `<div class="text-center text-muted py-3 small" style="grid-column: 1 / -1;">ไม่พบโฟลเดอร์ในช่วงที่เลือก</div>`
+                    : `<div class="text-center py-4 small text-white" style="grid-column: 1 / -1;"><i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>ยังไม่มีไฟล์ผลเพาะเชื้อ กดปุ่ม "เพิ่มไฟล์" เพื่ออัปโหลดไฟล์แรก</div>`;
                 return;
             }
 
@@ -1201,43 +1354,364 @@
             });
         }
 
-        async function openCSModal(folder) {
+        // ---------- ตัวช่วยผลเพาะเชื้อ ----------
+        function fmtSize(bytes) {
+            const n = Number(bytes) || 0;
+            if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+            return Math.max(1, Math.round(n / 1024)) + ' KB';
+        }
+        function fmtThaiDay(iso) {
+            const d = new Date(iso);
+            if (isNaN(d)) return '-';
+            return `${d.getDate()} ${TH_MONTH_SHORT[d.getMonth()]} ${d.getFullYear() + 543}`;
+        }
+        function csFileIcon(mime, name) {
+            if (/pdf/i.test(mime || '') || /\.pdf$/i.test(name || '')) return 'fa-file-pdf text-danger';
+            if (/^image\//i.test(mime || '')) return 'fa-file-image text-info';
+            return 'fa-file-lines text-secondary';
+        }
+        function csSplitName(name) {
+            const m = String(name || '').match(/^(.+?)(\.[A-Za-z0-9]{1,6})?$/);
+            return { base: (m && m[1]) || String(name || ''), ext: (m && m[2]) || '' };
+        }
+        function csTodayKey() {
+            const d = new Date();
+            return `${d.getFullYear() + 543}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+        function csKeyLabel(key) {
+            const [y, m] = key.split('-').map(Number);
+            return `${csMonthNamesFull[m - 1]} ${y}`;
+        }
+        function csFindFolderByKey(key) {
+            return allCSFolders.find(f => !f.isRoot && f.ym.key === key) || null;
+        }
+        function csFillMonthYear(monthId, yearId, key) {
+            const [y, m] = key.split('-');
+            const cur = new Date().getFullYear() + 543;
+            const years = [...new Set([cur + 1, cur, cur - 1, cur - 2, cur - 3, Number(y),
+                ...allCSFolders.filter(f => f.ym.yearBE).map(f => f.ym.yearBE)])].sort((a, b) => b - a);
+            document.getElementById(monthId).innerHTML = csMonthNamesFull
+                .map((name, i) => `<option value="${String(i + 1).padStart(2, '0')}">${name}</option>`).join('');
+            document.getElementById(yearId).innerHTML = years.map(v => `<option value="${v}">${v}</option>`).join('');
+            document.getElementById(monthId).value = m;
+            document.getElementById(yearId).value = y;
+        }
+        function csReadKey(monthId, yearId) {
+            return `${document.getElementById(yearId).value}-${document.getElementById(monthId).value}`;
+        }
+        // Bootstrap เปิดหน้าต่างซ้อนกันไม่ได้ จึงปิดหน้าต่างเดิมให้เสร็จก่อนเปิดหน้าต่างใหม่
+        function swapModal(fromId, openFn) {
+            const el = document.getElementById(fromId);
+            if (el.classList.contains('show')) {
+                el.addEventListener('hidden.bs.modal', () => openFn(), { once: true });
+                getModal(fromId).hide();
+            } else {
+                openFn();
+            }
+        }
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                r.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                r.readAsDataURL(file);
+            });
+        }
+        async function csFilePayload(file) {
+            if (file.size > CS_MAX_FILE_MB * 1024 * 1024) throw new Error(`ไฟล์ใหญ่เกิน ${CS_MAX_FILE_MB} MB`);
+            return { name: file.name, mimeType: file.type || 'application/octet-stream', data: await fileToBase64(file) };
+        }
+        // โหลดโฟลเดอร์ใหม่ แล้วเปิดรายการไฟล์ของโฟลเดอร์ที่ระบุ (ถ้ายังมีอยู่)
+        async function csReloadAndOpen(folderId) {
+            await loadCSFoldersViaFetch();
+            const f = folderId ? allCSFolders.find(x => x.id === folderId) : null;
+            if (f) openCSModal(f);
+        }
+
+        // ---------- รายการไฟล์ในโฟลเดอร์ ----------
+        function openCSModal(folder) {
             if (!folder) return;
-            const folderId = folder.id;
-            const driveUrl = folder.url || `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
-            document.getElementById('csOpenDrive').href = driveUrl;
+            csCurrentFolder = folder;
+            csCurrentFiles = [];
+            document.getElementById('csOpenDrive').href = folder.url || `https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;
             document.getElementById('csModalTitle').innerHTML = `<i class="fa-solid fa-folder-open me-2"></i>ผลเพาะเชื้อ ${esc(folder.ym.fullLabel)}`;
-            document.getElementById('csModalLoading').style.display = 'block';
-            document.getElementById('csFileList').innerHTML = '';
-            document.getElementById('csNoFiles').classList.add('d-none');
+            document.getElementById('csAddHereBtn').classList.toggle('d-none', !folder.ym.yearBE);
             getModal('csFileModal').show();
+            csLoadFileList();
+        }
 
+        async function csLoadFileList() {
+            const folder = csCurrentFolder;
+            const listEl = document.getElementById('csFileList');
+            document.getElementById('csModalLoading').style.display = 'block';
+            document.getElementById('csNoFiles').classList.add('d-none');
+            listEl.innerHTML = '';
             try {
-                const files = await fetchJson(`${CS_SCRIPT_URL}?action=getFiles&folderId=${encodeURIComponent(folderId)}`);
+                const files = await fetchJson(`${CS_SCRIPT_URL}?action=getFiles&folderId=${encodeURIComponent(folder.id)}`);
                 if (files && files.error) throw new Error(files.error);
-                const list = Array.isArray(files) ? files : [];
-
-                if (!list.length) {
+                if (folder !== csCurrentFolder) return; // ผู้ใช้เปลี่ยนโฟลเดอร์ระหว่างโหลด
+                csCurrentFiles = Array.isArray(files) ? files : [];
+                if (!csCurrentFiles.length) {
                     document.getElementById('csNoFiles').classList.remove('d-none');
-                } else {
-                    document.getElementById('csFileList').innerHTML = list.map(file => {
-                        const url = file.url || (file.id ? `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view` : driveUrl);
-                        return `
-                            <a href="${esc(url)}" target="_blank" rel="noopener" class="cs-file">
-                                <span class="d-flex align-items-center gap-2 text-truncate">
-                                    <i class="fa-solid fa-file-pdf text-danger fa-lg"></i>
-                                    <span class="text-truncate" style="font-size: 0.88rem;">${esc(file.name)}</span>
-                                </span>
-                                <span class="cs-file-btn"><i class="fa-solid fa-up-right-from-square me-1"></i> เปิดดู</span>
-                            </a>`;
-                    }).join('');
+                    return;
                 }
+                listEl.innerHTML = csCurrentFiles.map((file, i) => {
+                    const url = file.url || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`;
+                    const meta = [file.size ? fmtSize(file.size) : '', file.updated ? 'อัปเดต ' + fmtThaiDay(file.updated) : ''].filter(Boolean).join(' · ');
+                    return `
+                        <div class="cs-file">
+                            <a href="${esc(url)}" target="_blank" rel="noopener" class="cs-file-link" title="เปิดดูไฟล์">
+                                <i class="fa-solid ${csFileIcon(file.mimeType, file.name)} fa-lg"></i>
+                                <span class="d-flex flex-column" style="min-width: 0;">
+                                    <span class="text-truncate" style="font-size: 0.9rem;">${esc(file.name)}</span>
+                                    <span class="cs-file-meta">${esc(meta)}</span>
+                                </span>
+                            </a>
+                            <div class="act-group">
+                                <a class="btn-act view" href="${esc(url)}" target="_blank" rel="noopener" title="เปิดดู"><i class="fas fa-eye"></i></a>
+                                <button type="button" class="btn-act edit" data-act="edit" data-i="${i}" title="แก้ไข"><i class="fas fa-pen"></i></button>
+                                <button type="button" class="btn-act del" data-act="del" data-i="${i}" title="ลบ"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                }).join('');
             } catch (err) {
-                document.getElementById('csFileList').innerHTML = `
+                listEl.innerHTML = `
                     <div class="text-danger text-center small py-2">ดึงรายการไฟล์ไม่สำเร็จ: ${esc(err.message)}</div>
                     <div class="text-center small text-secondary">กดปุ่ม "เปิดโฟลเดอร์ใน Google Drive" ด้านล่างเพื่อดูไฟล์แทน</div>`;
             } finally {
                 document.getElementById('csModalLoading').style.display = 'none';
+            }
+        }
+
+        // ---------- เพิ่มไฟล์ ----------
+        function csOpenUpload(presetKey) {
+            csReturnToList = document.getElementById('csFileModal').classList.contains('show');
+            swapModal('csFileModal', () => {
+                csUploadItems = [];
+                csFillMonthYear('csUpMonth', 'csUpYear', presetKey || csTodayKey());
+                document.getElementById('csUpBy').value = lastActor;
+                document.getElementById('csUpNote').value = '';
+                document.getElementById('csUpFiles').value = '';
+                csUpdateUploadHint();
+                csRenderUploadList();
+                getModal('csUploadModal').show();
+            });
+        }
+
+        function csUpdateUploadHint() {
+            const key = csReadKey('csUpMonth', 'csUpYear');
+            const f = csFindFolderByKey(key);
+            document.getElementById('csUpHint').innerHTML = f
+                ? `<i class="fa-solid fa-folder text-success me-1"></i>บันทึกในโฟลเดอร์ "${esc(f.name)}"`
+                : `<i class="fa-solid fa-folder-plus text-warning me-1"></i>ระบบจะสร้างโฟลเดอร์ "${esc(csKeyLabel(key))}" ให้อัตโนมัติ`;
+        }
+
+        function csAddUploadFiles(fileList) {
+            [...fileList].forEach(file => {
+                const tooBig = file.size > CS_MAX_FILE_MB * 1024 * 1024;
+                csUploadItems.push({ file, tooBig, status: tooBig ? 'error' : 'wait', msg: tooBig ? `ใหญ่เกิน ${CS_MAX_FILE_MB} MB` : '' });
+            });
+            csRenderUploadList();
+        }
+
+        function csRenderUploadList() {
+            const el = document.getElementById('csUpList');
+            const label = {
+                wait: '<span class="cs-st text-white-50">รออัปโหลด</span>',
+                uploading: '<span class="cs-st text-info"><span class="spinner-border spinner-border-sm me-1"></span>กำลังอัปโหลด</span>',
+                done: '<span class="cs-st text-success"><i class="fa-solid fa-check me-1"></i>สำเร็จ</span>'
+            };
+            el.innerHTML = csUploadItems.map((it, i) => `
+                <div class="cs-up-item">
+                    <i class="fa-solid ${csFileIcon(it.file.type, it.file.name)}"></i>
+                    <span class="nm" title="${esc(it.file.name)}">${esc(it.file.name)}</span>
+                    <span class="cs-file-meta">${fmtSize(it.file.size)}</span>
+                    ${it.status === 'error' ? `<span class="cs-st text-danger text-wrap"><i class="fa-solid fa-circle-exclamation me-1"></i>${esc(it.msg)}</span>` : label[it.status]}
+                    ${(it.status !== 'done' && it.status !== 'uploading' && !csUploading) ? `<button type="button" class="btn-close btn-close-white" style="font-size: 0.6rem;" data-rm="${i}" title="นำออก"></button>` : ''}
+                </div>`).join('');
+        }
+
+        let csUploadFolderId = '';
+
+        function csFinishUpload() {
+            const done = csUploadItems.filter(it => it.status === 'done').length;
+            const skipped = csUploadItems.filter(it => it.tooBig).map(it => it.file.name);
+            showToast(`อัปโหลดสำเร็จ ${done} ไฟล์` + (skipped.length ? ` (ข้ามไฟล์ที่ใหญ่เกิน ${CS_MAX_FILE_MB} MB: ${skipped.join(', ')})` : ''), skipped.length ? 'warning' : 'success');
+            csReturnToList = false;
+            swapModal('csUploadModal', () => csReloadAndOpen(csUploadFolderId));
+        }
+
+        async function csDoUpload() {
+            const pending = csUploadItems.filter(it => it.status !== 'done' && !it.tooBig);
+            if (!pending.length) {
+                if (csUploadItems.some(it => it.status === 'done')) csFinishUpload();
+                else showToast(csUploadItems.length ? `ไฟล์ที่เลือกใหญ่เกิน ${CS_MAX_FILE_MB} MB กรุณาเลือกไฟล์อื่น` : 'กรุณาเลือกไฟล์ที่ต้องการอัปโหลด', 'warning');
+                return;
+            }
+            const by = document.getElementById('csUpBy').value.trim();
+            if (!by) { showToast('กรุณาระบุชื่อผู้อัปโหลด', 'warning'); document.getElementById('csUpBy').focus(); return; }
+            lastActor = by;
+
+            const key = csReadKey('csUpMonth', 'csUpYear');
+            const note = document.getElementById('csUpNote').value.trim();
+            const btn = document.getElementById('csUpBtn');
+            let folderId = (csFindFolderByKey(key) || {}).id || '';
+            let okCount = 0;
+            if (!csUploadItems.some(it => it.status === 'done')) csUploadFolderId = '';
+
+            csUploading = true;
+            setBtnLoading(btn, true);
+            try {
+                for (const it of pending) {
+                    it.status = 'uploading'; it.msg = '';
+                    csRenderUploadList();
+                    try {
+                        const r = await postAction({ action: 'csUpload', folderId, monthKey: key, file: await csFilePayload(it.file), by, reason: note });
+                        folderId = r.folder.id; // ไฟล์ถัดไปใช้โฟลเดอร์เดียวกัน
+                        csUploadFolderId = folderId;
+                        it.status = 'done';
+                        okCount++;
+                    } catch (e) {
+                        it.status = 'error'; it.msg = e.message;
+                        if (e.message === 'ยกเลิกการดำเนินการ') break;
+                    }
+                    csRenderUploadList();
+                }
+            } finally {
+                csUploading = false;
+                setBtnLoading(btn, false);
+                csRenderUploadList();
+            }
+            if (!okCount) return;
+
+            const failed = csUploadItems.filter(it => it.status !== 'done' && !it.tooBig).length;
+            if (!failed) {
+                csFinishUpload();
+            } else {
+                showToast(`อัปโหลดสำเร็จ ${okCount} ไฟล์ ไม่สำเร็จ ${failed} ไฟล์ กด "อัปโหลด" อีกครั้งเพื่อลองใหม่`, 'warning');
+                loadCSFoldersViaFetch();
+            }
+        }
+
+        // ---------- แก้ไขไฟล์ ----------
+        function csOpenEdit(file) {
+            if (!file) return;
+            csEditingFile = file;
+            csReturnToList = true;
+            swapModal('csFileModal', () => {
+                const { base, ext } = csSplitName(file.name);
+                document.getElementById('csEdName').value = base;
+                const extEl = document.getElementById('csEdExt');
+                extEl.textContent = ext;
+                extEl.classList.toggle('d-none', !ext);
+                const inMonth = !!csCurrentFolder.ym.yearBE;
+                csFillMonthYear('csEdMonth', 'csEdYear', inMonth ? csCurrentFolder.ym.key : csTodayKey());
+                document.getElementById('csEdFolderHint').innerHTML = inMonth
+                    ? `เปลี่ยนเดือนเพื่อย้ายไฟล์ไปโฟลเดอร์อื่น`
+                    : `<span class="text-warning">ไฟล์นี้ยังไม่อยู่ในโฟลเดอร์เดือน เมื่อบันทึกจะย้ายไปเดือนที่เลือก</span>`;
+                document.getElementById('csEdFile').value = '';
+                csShowEditFileInfo();
+                document.getElementById('csEdBy').value = lastActor;
+                document.getElementById('csEdReason').value = '';
+                getModal('csEditModal').show();
+            });
+        }
+
+        function csShowEditFileInfo() {
+            const f = document.getElementById('csEdFile').files[0];
+            const el = document.getElementById('csEdFileInfo');
+            document.getElementById('csEdFileClear').classList.toggle('d-none', !f);
+            if (!f) {
+                el.className = 'small mt-1 text-secondary';
+                el.textContent = 'ใช้เมื่ออัปโหลดไฟล์ผิด ไฟล์เดิมจะถูกย้ายไปถังขยะของ Google Drive';
+            } else if (f.size > CS_MAX_FILE_MB * 1024 * 1024) {
+                el.className = 'small mt-1 text-danger';
+                el.textContent = `ไฟล์ใหญ่เกิน ${CS_MAX_FILE_MB} MB (${fmtSize(f.size)}) กรุณาเลือกไฟล์อื่น`;
+            } else {
+                el.className = 'small mt-1 text-success';
+                el.textContent = `จะเปลี่ยนเป็นไฟล์ "${f.name}" (${fmtSize(f.size)}) ไฟล์เดิมจะถูกย้ายไปถังขยะ`;
+            }
+        }
+
+        async function csSaveEdit() {
+            const file = csEditingFile;
+            if (!file) return;
+            const { ext } = csSplitName(file.name);
+            const base = document.getElementById('csEdName').value.trim();
+            if (!base) { showToast('กรุณาระบุชื่อไฟล์', 'warning'); document.getElementById('csEdName').focus(); return; }
+            const newFile = document.getElementById('csEdFile').files[0] || null;
+            if (newFile && newFile.size > CS_MAX_FILE_MB * 1024 * 1024) { showToast(`ไฟล์ใหม่ใหญ่เกิน ${CS_MAX_FILE_MB} MB`, 'warning'); return; }
+
+            const payload = { action: 'csUpdate', fileId: file.id };
+            if (newFile) payload.newName = base;                       // นามสกุลตามไฟล์ใหม่
+            else if (base + ext !== file.name) payload.newName = base + ext;
+            const key = csReadKey('csEdMonth', 'csEdYear');
+            if (key !== csCurrentFolder.ym.key) {
+                const target = csFindFolderByKey(key);
+                if (target) payload.folderId = target.id; else payload.monthKey = key;
+            }
+            if (!newFile && !payload.newName && !payload.folderId && !payload.monthKey) {
+                showToast('ยังไม่มีการเปลี่ยนแปลง', 'info');
+                return;
+            }
+            const by = document.getElementById('csEdBy').value.trim();
+            if (!by) { showToast('กรุณาระบุชื่อผู้แก้ไข', 'warning'); document.getElementById('csEdBy').focus(); return; }
+            lastActor = by;
+            payload.by = by;
+            payload.reason = document.getElementById('csEdReason').value.trim();
+
+            const btn = document.getElementById('csEdSaveBtn');
+            setBtnLoading(btn, true);
+            try {
+                if (newFile) payload.file = await csFilePayload(newFile);
+                const r = await postAction(payload);
+                showToast('บันทึกการแก้ไขเรียบร้อย', 'success');
+                csReturnToList = false;
+                swapModal('csEditModal', () => csReloadAndOpen(r.folder.id));
+            } catch (e) {
+                showToast(e.message, 'danger');
+            } finally {
+                setBtnLoading(btn, false);
+            }
+        }
+
+        // ---------- ลบไฟล์ ----------
+        function csOpenDelete(file) {
+            if (!file) return;
+            csDeletingFile = file;
+            csReturnToList = true;
+            swapModal('csFileModal', () => {
+                document.getElementById('csDelSummary').innerHTML = `
+                    <div class="view-chip">
+                        <div class="lbl">ไฟล์ที่จะลบ</div>
+                        <div class="text-white fw-bold text-break"><i class="fa-solid ${csFileIcon(file.mimeType, file.name)} me-2"></i>${esc(file.name)}</div>
+                        <div class="small text-secondary mt-1">โฟลเดอร์: <span class="text-white">${esc(csCurrentFolder.name)}</span>${file.size ? ' · ' + fmtSize(file.size) : ''}</div>
+                    </div>`;
+                document.getElementById('csDelBy').value = lastActor;
+                document.getElementById('csDelReason').value = '';
+                getModal('csDeleteModal').show();
+            });
+        }
+
+        async function csConfirmDelete() {
+            const file = csDeletingFile;
+            if (!file) return;
+            const by = document.getElementById('csDelBy').value.trim();
+            if (!by) { showToast('กรุณาระบุชื่อผู้ลบ', 'warning'); document.getElementById('csDelBy').focus(); return; }
+            lastActor = by;
+
+            const btn = document.getElementById('csDelConfirmBtn');
+            setBtnLoading(btn, true);
+            try {
+                const r = await postAction({ action: 'csDelete', fileId: file.id, by, reason: document.getElementById('csDelReason').value.trim() });
+                showToast(r.folderRemoved ? 'ลบไฟล์เรียบร้อย เดือนนี้ไม่มีไฟล์เหลือ จึงลบโฟลเดอร์เดือนออกด้วย' : 'ลบไฟล์เรียบร้อย', 'success');
+                csReturnToList = false;
+                const folderId = r.folderRemoved ? null : csCurrentFolder.id;
+                swapModal('csDeleteModal', () => csReloadAndOpen(folderId));
+            } catch (e) {
+                showToast(e.message, 'danger');
+            } finally {
+                setBtnLoading(btn, false);
             }
         }
 
@@ -1246,6 +1720,40 @@
         // ==========================================
         document.getElementById('csSearchInput').addEventListener('input', renderCSGroups);
         document.getElementById('csMonthFilter').addEventListener('change', renderCSGroups);
+        document.getElementById('csAddBtn').addEventListener('click', () => csOpenUpload());
+        document.getElementById('csAddHereBtn').addEventListener('click', () => csOpenUpload(csCurrentFolder && csCurrentFolder.ym.yearBE ? csCurrentFolder.ym.key : ''));
+        document.getElementById('csFileList').addEventListener('click', e => {
+            const btn = e.target.closest('button[data-act]');
+            if (!btn) return;
+            const file = csCurrentFiles[Number(btn.dataset.i)];
+            if (btn.dataset.act === 'edit') csOpenEdit(file); else csOpenDelete(file);
+        });
+        document.getElementById('csUpMonth').addEventListener('change', csUpdateUploadHint);
+        document.getElementById('csUpYear').addEventListener('change', csUpdateUploadHint);
+        document.getElementById('csUpFiles').addEventListener('change', e => { csAddUploadFiles(e.target.files); e.target.value = ''; });
+        document.getElementById('csUpList').addEventListener('click', e => {
+            const b = e.target.closest('[data-rm]');
+            if (!b || csUploading) return;
+            csUploadItems.splice(Number(b.dataset.rm), 1);
+            csRenderUploadList();
+        });
+        (() => {
+            const drop = document.getElementById('csDrop');
+            ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+            ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+            drop.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files.length) csAddUploadFiles(e.dataTransfer.files); });
+        })();
+        document.getElementById('csUpBtn').addEventListener('click', csDoUpload);
+        document.getElementById('csEdFile').addEventListener('change', csShowEditFileInfo);
+        document.getElementById('csEdFileClear').addEventListener('click', () => { document.getElementById('csEdFile').value = ''; csShowEditFileInfo(); });
+        document.getElementById('csEdSaveBtn').addEventListener('click', csSaveEdit);
+        document.getElementById('csDelConfirmBtn').addEventListener('click', csConfirmDelete);
+        // ยกเลิกการเพิ่ม/แก้ไข/ลบ แล้วกลับไปหน้ารายการไฟล์เดิม
+        ['csUploadModal', 'csEditModal', 'csDeleteModal'].forEach(id => {
+            document.getElementById(id).addEventListener('hidden.bs.modal', () => {
+                if (csReturnToList && csCurrentFolder) { csReturnToList = false; openCSModal(csCurrentFolder); }
+            });
+        });
         document.getElementById('monthFilter').addEventListener('change', e => setMonth(e.target.value));
         document.getElementById('monthPrev').addEventListener('click', () => stepMonth(-1));
         document.getElementById('monthNext').addEventListener('click', () => stepMonth(1));
