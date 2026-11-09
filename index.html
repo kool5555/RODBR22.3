@@ -15,8 +15,6 @@
     <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
-    <!-- Marked.js สำหรับแปลง Markdown เป็น HTML -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
@@ -50,7 +48,6 @@
         .flatpickr-day.no-data-past { color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.1); }
         
         .analysis-box { background: rgba(255,255,255,0.02); border-radius: 15px; border: 1px dashed #475569; padding: 15px; min-height: 120px; }
-        .ai-result-box { display: none; background: rgba(56, 189, 248, 0.05); border: 1px solid #38bdf8; border-radius: 15px; padding: 15px; margin-top: 15px; }
 
         /* ===== ตารางประวัติ RO (กรอบโค้งมน ตัวอักษรขาว) ===== */
         /* ===== ส่วนข้อมูลรายเดือน (ตัวเลือกเดือน + กราฟ) ===== */
@@ -164,19 +161,14 @@
         </div>
     </div>
 
-    <!-- ปลั๊กอินวิเคราะห์ (TRT Rules + AI) -->
+    <!-- ปลั๊กอินวิเคราะห์ (TRT Rules) -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card-custom border-info">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
-                    <h5 class="text-info m-0"><i class="fas fa-robot me-2"></i>ปลั๊กอินวิเคราะห์ระบบน้ำ (TRT Analysis)</h5>
-                    <button class="btn btn-sm btn-outline-info rounded-pill px-3" onclick="callAI()"><i class="fas fa-magic me-1"></i> ให้ AI วิเคราะห์เชิงลึก</button>
+                    <h5 class="text-info m-0"><i class="fas fa-clipboard-check me-2"></i>ปลั๊กอินวิเคราะห์ระบบน้ำ (TRT Analysis)</h5>
                 </div>
                 <div id="analysisResult" class="analysis-box"></div>
-                <div id="aiResultBox" class="ai-result-box">
-                    <h6 class="text-info fw-bold mb-2"><i class="fas fa-brain me-2"></i>ความเห็นจาก AI (Deep Analysis)</h6>
-                    <div id="aiText" style="font-size: 0.95rem;"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -702,30 +694,6 @@
             document.getElementById('analysisResult').innerHTML = html;
         }
 
-        async function callAI() {
-            if(!currentDayData) return;
-            let aiBox = document.getElementById('aiResultBox');
-            let aiText = document.getElementById('aiText');
-            aiBox.style.display = 'block';
-            aiText.innerHTML = `<span class="spinner-border spinner-border-sm text-info me-2"></span> กำลังส่งข้อมูลให้ AI วิเคราะห์...`;
-
-            try {
-                const cleanData = Object.fromEntries(Object.entries(currentDayData).filter(([k]) => !k.startsWith('_')));
-                const responseData = await fetchJson(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'analyze', data: cleanData })
-                });
-                if(responseData.result) {
-                    aiText.innerHTML = marked.parse(responseData.result);
-                } else {
-                    aiText.innerHTML = `<span class="text-danger">เกิดข้อผิดพลาด: ${esc(responseData.error || 'ไม่ทราบสาเหตุ')}</span>`;
-                }
-            } catch(e) {
-                aiText.innerHTML = `<span class="text-danger">การเชื่อมต่อล้มเหลว: ${esc(e.message)}</span>`;
-            }
-        }
-
         // forceRecord = ระบุรายการที่ต้องการแสดง (ถ้าไม่ระบุจะใช้รายการล่าสุดของวันนั้น)
         function applyFilter(selectedDate, forceRecord) {
             if(!selectedDate) return;
@@ -735,7 +703,6 @@
                 currentDayData = forceRecord || targetDataList[targetDataList.length - 1];
                 updateDashboard(currentDayData); 
                 analyzeWaterSystem(currentDayData);
-                document.getElementById('aiResultBox').style.display = 'none';
             }
             setMonth(selectedDate.substring(0, 7)); // ส่วนข้อมูลรายเดือนเปลี่ยนตามวันที่เลือก
         }
